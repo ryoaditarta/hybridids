@@ -49,8 +49,8 @@ import time
 import sys
 import csv
 
-PCAP_DIR = "../data/pcap/"
-CSV_DIR = "../data/csv/"
+PCAP_DIR = "../../data/pcap/"
+CSV_DIR = "../../data/csv/"
 TARGET_URL = "http://192.168.100.122"
 INTERFACE = "ens18"
 
