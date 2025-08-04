@@ -1,11 +1,14 @@
 import subprocess
 import os
-import sys
 import time
 import csv
+import sys
 
 PCAP_DIR = "../../data/pcap/"
 CSV_DIR = "../../data/csv/"
+PCAP_NAME = "slowloris.pcap"
+CSV_NAME = "slowloris.csv"
+INTERFACE = "ens18"
 
 def file_summary(pcap_file, csv_file):
     pcap_size = os.path.getsize(pcap_file) / (1024 * 1024) if os.path.exists(pcap_file) else 0
@@ -18,21 +21,37 @@ def file_summary(pcap_file, csv_file):
     print(f"[SUMMARY] {os.path.basename(pcap_file)}: {pcap_size:.2f} MB")
     print(f"[SUMMARY] {os.path.basename(csv_file)}: {csv_size:.2f} MB, {csv_rows} baris")
 
-def convert_all_pcaps():
-    start_time = time.time()
+def run_tcpdump_and_convert(duration):
     os.makedirs(CSV_DIR, exist_ok=True)
-    pcap_files = [f for f in os.listdir(PCAP_DIR) if f.endswith('.pcap')]
-    print(f"[INFO] Menemukan {len(pcap_files)} file pcap di {PCAP_DIR}")
-    for pcap_file in pcap_files:
-        pcap_path = os.path.join(PCAP_DIR, pcap_file)
-        csv_file = os.path.splitext(pcap_file)[0] + ".csv"
-        csv_path = os.path.join(CSV_DIR, csv_file)
-        print(f"[INFO] Konversi {pcap_path} -> {csv_path}")
-        cicflowmeter_cmd = f"cicflowmeter -f {pcap_path} -c {csv_path}"
-        subprocess.run(cicflowmeter_cmd, shell=True)
-        file_summary(pcap_path, csv_path)
+    os.makedirs(PCAP_DIR, exist_ok=True)
+    pcap_path = os.path.join(PCAP_DIR, PCAP_NAME)
+    csv_path = os.path.join(CSV_DIR, CSV_NAME)
+
+    print(f"[INFO] Menjalankan tcpdump selama {duration} detik ke {pcap_path}")
+    tcpdump_cmd = f"timeout {duration} tcpdump -i {INTERFACE} -w {pcap_path} port 80"
+    subprocess.run(tcpdump_cmd, shell=True)
+    print(f"[INFO] tcpdump selesai untuk {pcap_path}")
+
+    start_time = time.time()
+    print(f"[INFO] Mengonversi {pcap_path} ke {csv_path} menggunakan cicflowmeter")
+    if not os.path.exists(pcap_path):
+        print(f"[ERROR] File {pcap_path} tidak ditemukan.")
+        return
+
+    print(f"[INFO] Konversi {pcap_path} -> {csv_path}")
+    cicflowmeter_cmd = f"cicflowmeter -f {pcap_path} -c {csv_path}"
+    subprocess.run(cicflowmeter_cmd, shell=True)
+    file_summary(pcap_path, csv_path)
     total_time = time.time() - start_time
-    print(f"\n[INFO] Total waktu pemrosesan: {total_time:.2f} detik")
+    print(f"\n[INFO] Total waktu Konversi PCAP ke CSV: {total_time:.2f} detik")
 
 if __name__ == "__main__":
-    convert_all_pcaps()
+    if len(sys.argv) > 1:
+        try:
+            duration = int(sys.argv[1])
+        except ValueError:
+            print("Argumen durasi harus berupa angka (detik).")
+            sys.exit(1)
+    else:
+        duration = 60  # default
+    run_tcpdump_and_convert(duration)
