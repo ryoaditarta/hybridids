@@ -19,7 +19,7 @@ def file_summary(pcap_file, csv_file):
             reader = csv.reader(f)
             csv_rows = sum(1 for _ in reader) - 1  # minus header
     print(f"[SUMMARY] {os.path.basename(pcap_file)}: {pcap_size:.2f} MB")
-    print(f"[SUMMARY] {os.path.basename(csv_file)}: {csv_size:.2f} MB, {csv_rows} baris")
+    print(f"[SUMMARY] {os.path.basename(csv_file)}: {csv_size:.2f} MB, {csv_rows} baris/entry")
 
 def run_tcpdump_and_convert(duration):
     os.makedirs(CSV_DIR, exist_ok=True)
