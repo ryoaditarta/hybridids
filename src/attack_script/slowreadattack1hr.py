@@ -69,7 +69,7 @@ RUNTIME_PER_ATTACK = 240
 def run_attack(attack_name, total_connections, readrate_list, runtime):
     for readrate in readrate_list:
         print(f"\n[INFO] Menjalankan attack: {attack_name}, total_connections: {total_connections}, runtime: {runtime}, readrate: {readrate}")
-        attack_cmd = f"slowhttptest -c {total_connections} -r {total_connections} -X -t GET -u {TARGET_URL} -z {readrate} -l {runtime}"
+        attack_cmd = f"slowhttptest -c {total_connections} -r {total_connections} -X -t GET -u {TARGET_URL} -z {readrate} -w 8 -y 16 -l {runtime}"
         print(f"[INFO] Menjalankan: {attack_cmd}")
         subprocess.run(attack_cmd, shell=True)
 
