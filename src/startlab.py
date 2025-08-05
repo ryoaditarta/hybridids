@@ -151,7 +151,7 @@ def process_data():
                     start = event["start"]
                 ts_parsed = parse_timestamp(start)
                 key = tuple_normalize((src_ip, str(src_port), dest_ip, str(dest_port), proto_num))
-                print(f"[DEBUG] Tuple dari alert eve.json: {key} SID: {sid} TS: {ts_parsed}")
+                # print(f"[DEBUG] Tuple dari alert eve.json: {key} SID: {sid} TS: {ts_parsed}")
                 if all([src_ip, src_port, dest_ip, dest_port, proto_num]):
                     alert_tuples.add((key, ts_parsed))
                     label = sid_label_map.get(sid, "")
