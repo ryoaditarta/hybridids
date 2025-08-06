@@ -288,9 +288,82 @@ def process_data():
     metric_duration = metric_end - metric_start
     print(f"\n[METRIC] Waktu proses pencocokan dan filtering: {metric_duration:.3f} detik")
 
+def evaluate_labeled_vs_groundtruth(labeled_csv_path):
+    # Mapping IP ke label ground truth
+    ip_label_map = {
+        "192.168.100.135": "slowloris",
+        "192.168.100.146": "slowread",
+        "192.168.100.148": "slowpost",
+        "192.168.100.41": "benign"
+    }
+
+    classes = ["slowloris", "slowread", "slowpost", "benign"]
+    gt_labels = []
+    pred_labels = []
+    total = 0
+    correct = 0
+    confusion = {c1: {c2: 0 for c2 in classes} for c1 in classes}
+
+    with open(labeled_csv_path, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            src_ip = row.get('src_ip')
+            pred = row.get('label', '').strip() or "benign"
+            gt = ip_label_map.get(src_ip, "benign")
+            gt_labels.append(gt)
+            pred_labels.append(pred)
+            total += 1
+            if pred == gt:
+                correct += 1
+            confusion[gt][pred] += 1
+
+    accuracy = correct / total if total else 0
+
+    # Per-class metrics
+    metrics = {}
+    for cls in classes:
+        TP = confusion[cls][cls]
+        FP = sum(confusion[other][cls] for other in classes if other != cls)
+        FN = sum(confusion[cls][other] for other in classes if other != cls)
+        TN = sum(confusion[o1][o2] for o1 in classes for o2 in classes if o1 != cls and o2 != cls)
+        precision = TP / (TP + FP) if (TP + FP) else 0
+        recall = TP / (TP + FN) if (TP + FN) else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0
+        tpr = recall
+        fpr = FP / (FP + TN) if (FP + TN) else 0
+        metrics[cls] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "TPR": tpr,
+            "FPR": fpr,
+            "support": sum(confusion[cls].values())
+        }
+
+    print("\n=== Evaluasi Labeled CSV vs Ground Truth (berdasarkan IP) ===")
+    print(f"Total baris: {total}")
+    print(f"Benar: {correct}")
+    print(f"Akurasi: {accuracy:.4f}")
+    print("\nConfusion Matrix (GT, Prediksi):")
+    print("GT\\Pred".ljust(12) + "".join([c.ljust(12) for c in classes]))
+    for gt in classes:
+        print(gt.ljust(12) + "".join([str(confusion[gt][pred]).ljust(12) for pred in classes]))
+    print("\nPer-class metrics:")
+    for cls in classes:
+        m = metrics[cls]
+        print(f"{cls}: Precision={m['precision']:.3f} Recall={m['recall']:.3f} F1={m['f1']:.3f} TPR={m['TPR']:.3f} FPR={m['FPR']:.3f} Support={m['support']}")
+
+    # Macro average
+    macro_precision = sum(m['precision'] for m in metrics.values()) / len(classes)
+    macro_recall = sum(m['recall'] for m in metrics.values()) / len(classes)
+    macro_f1 = sum(m['f1'] for m in metrics.values()) / len(classes)
+    print(f"\nMacro avg: Precision={macro_precision:.3f} Recall={macro_recall:.3f} F1={macro_f1:.3f}")
+
 if __name__ == "__main__":
     if os.geteuid() != 0:
         print("Skrip ini harus dijalankan dengan hak akses root. Coba gunakan 'sudo'.")
     else:
         if run_capture():
             process_data()
+            labeled_csv_path = CICFLOWMETER_CSV_PATH.replace('.csv', '_labeled.csv')
+            evaluate_labeled_vs_groundtruth(labeled_csv_path)

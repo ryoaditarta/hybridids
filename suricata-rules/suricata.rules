@@ -1,13 +1,16 @@
 #alert tcp any any <> any 80 (msg:"Mark GET req"; http.method; content:"GET"; flowbits:set,get; noalert; sid:1;)
-alert tcp any any <> any 80 (msg:"DoS Suspicion"; flags:PA; flowbits:set,sus; detection_filter: track by_src, count 100, seconds 10; content:!"HTTP/1.1"; nocase; noalert; sid:1001;)
+alert tcp any any <> any 80 (msg:"DoS Suspicion"; flags:PA; flowbits:set,sus; detection_filter: track by_src, count 100, seconds 10; noalert; sid:1001;)
+#content:!"HTTP/1.1"; nocase;
 alert tcp any any <> any 80 (msg:"PSH ACK Count Start"; flags:PA; flowbits:isset,sus; flowint:pac,notset; flowint:pac,=,1; noalert; sid:1002;)
 alert tcp any any <> any 80 (msg:"PSH ACK Count"; flags:PA; flowbits:isset,sus; flowint:pac,isset; flowint:pac,+,1; noalert; sid:1003;)
-alert tcp any any <> any 80 (msg:"Possible Slowloris Attack"; flowbits:isnotset,post; flowbits:isnotset,flagged; flow.age:>=10; flowint:pac,>=,2; flowbits:isnotset,isalert; flowbits:set,isalert; classtype:attempted-dos; sid:1004;)
+alert tcp any any <> any 80 (msg:"Possible Slowloris Attack"; flow.age:>20; flowint:pac,>=,2; flowbits:isnotset,post; flowbits:isnotset,isalert; flowbits:set,isalert; classtype:attempted-dos; sid:1004;)
 
-alert tcp any any <> any 80 (msg:"DoS Suspicion"; http.response_line; content:"HTTP/1.1 200 OK"; flowbits:set,sus2; detection_filter: track by_src, count 100, seconds 10; noalert; sid:1006;)
-alert tcp any any <> any 80 (msg:"windowcheck"; flowbits:isset,sus2; flags:!P,A; tcp.hdr; content:"|80 10|"; byte_test:2,=,0x0247,0,relative; flowbits:set,smallwindow; noalert; sid:1007;)
-alert tcp any any <> any 80 (msg:"windowcheck"; flowbits:isset,sus2; flags:!P,A; tcp.hdr; content:"|80 10|"; byte_test:2,=,0x0246,0,relative; flowbits:set,smallwindow; noalert; sid:1008;)
+#alert tcp any any <> any 80 (msg:"Possible Slow POST Attack"; flowint:pac,>=,2; flowbits:isset,post; flowbits:isnotset,isalert; flowbits:set,isalert; classtype:attempted-dos; sid:1006;)
+
+alert tcp any any <> any 80 (msg:"DoS Suspicion"; http.response_line; content:"HTTP/1.1 200 OK"; flowbits:set,sus2; detection_filter: track by_src, count 100, seconds 10; noalert; sid:1007;)
+alert tcp any any <> any 80 (msg:"windowcheck"; flowbits:isset,sus2; flags:!P,A; tcp.hdr; content:"|80 10|"; byte_test:2,=,0x0247,0,relative; flowbits:set,smallwindow; noalert; sid:1008;)
+alert tcp any any <> any 80 (msg:"windowcheck"; flowbits:isset,sus2; flags:!P,A; tcp.hdr; content:"|80 10|"; byte_test:2,=,0x0246,0,relative; flowbits:set,smallwindow; noalert; sid:1009;)
 alert tcp any any <> any 80 (msg:"Possible Slow READ Attack"; flowbits:isset,sus2; flowbits:isset,smallwindow; flow.age:>=10; flowbits:isnotset,isalert; flowbits:set,isalert; classtype:attempted-dos; sid:1005;)
 
-#alert tcp any any <> any 80 (msg:"Mark POST req"; http.method;content:"POST"; flowbits:set,post; noalert; sid:1009;)
-#alert tcp any any <> any 80 (msg:"Possible Slow POST Attack"; flowbits:isset,sus; flow.age:>=10; flowbits:isset,post; flowbits:isnotset,isalert; flowbits:set,isalert; classtype:attempted-dos; sid:1006;)
+alert tcp any any <> any 80 (msg:"POST"; http.method; content:"POST"; flowbits:set,post; sid:10079;)
+alert tcp any any <> any 80 (msg:"Possible Slow POST Attack"; flowbits:isset,sus; flow.age:>=10; flowbits:isset,post; flowbits:isnotset,isalert; flowbits:set,isalert; classtype:attempted-dos; sid:1006;)
