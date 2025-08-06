@@ -1,2 +1,4 @@
 venv312/
 data/log/
+data/csv/*.csv
+data/pcap/*.pcap
