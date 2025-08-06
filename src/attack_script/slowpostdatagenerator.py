@@ -54,3 +54,4 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         duration = 60
+    run_tcpdump_and_convert(duration)
