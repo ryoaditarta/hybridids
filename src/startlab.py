@@ -61,11 +61,29 @@ def run_capture():
     except FileNotFoundError as e:
         print(f"Kesalahan: '{e.filename}' tidak ditemukan. Pastikan sudah terinstal.")
         return False
+    
+def evaluate(with_autoencoder=False):
+    if(not with_autoencoder):
+        print("\n--- Evaluasi tanpa Autoencoder ---")
+    else:
+        # --- Memulai inferensi model autoencoder ---
+        print("\n--- Memulai Inferensi Model Autoencoder ---")
+        import subprocess
+        MLcommand = "python3.12 ./autoencoder/slowlorisautoencoder/slowlorisautoencoder.py"
+
+        try:
+            result = subprocess.run(MLcommand, shell=True, check=True, text=True, capture_output=True)
+            # print("Output dari skrip:")
+            print(result.stdout)
+        except subprocess.CalledProcessError as e:
+            print("Terjadi error saat menjalankan perintah:")
+            print(e.stderr)
 
 def process_data():
     """Menjalankan cicflowmeter, membaca log, dan mencocokkan tuple."""
     print("\n--- Memulai Analisis Data ---")
     
+    import subprocess
     print("-> Menjalankan cicflowmeter...")
     try:
         cicflowmeter_command = f"cicflowmeter -f {PCAP_OUTPUT_FILE} -c {CICFLOWMETER_CSV_PATH}"
@@ -225,6 +243,7 @@ def process_data():
                 if key == alert_key and ts and alert_ts and abs((ts - alert_ts).total_seconds()) <= 1:
                     label = lbl
                     break
+            
             row['label'] = label
             if label == 'slowloris':
                 slowloris_count += 1
@@ -287,6 +306,8 @@ def process_data():
     metric_end = time.time()
     metric_duration = metric_end - metric_start
     print(f"\n[METRIC] Waktu proses pencocokan dan filtering: {metric_duration:.3f} detik")
+
+    evaluate(False)
 
 def evaluate_labeled_vs_groundtruth(labeled_csv_path):
     # Mapping IP ke label ground truth
