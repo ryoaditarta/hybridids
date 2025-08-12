@@ -29,17 +29,16 @@ else:
 # --- Fungsi untuk menjalankan proses ---
 def run_capture():
     """
-    Menjalankan tcpdump dan Suricata dengan termination yang lebih andal.
-    tcpdump akan berhenti sendiri setelah durasi yang ditentukan.
+    Menjalankan tcpdump dan Suricata
     """
-    print(f"Memulai pengambilan data pada antarmuka '{INTERFACE}' selama {DURATION_SECONDS} detik...")
+    print(f"Capture data in interface '{INTERFACE}' for {DURATION_SECONDS} seconds...")
     os.makedirs(PCAP_OUTPUT_DIR, exist_ok=True)
     open(EVE_JSON_PATH, 'w').close()
 
     try:
         # Perintah tcpdump yang hanya menangkap trafik port 80 dan berhenti sendiri sesuai durasi
         tcpdump_command = f"timeout {DURATION_SECONDS} tcpdump -i {INTERFACE} -w {PCAP_OUTPUT_FILE} port 80"
-        
+
         # Suricata tetap dihentikan secara manual
         suricata_command = f"timeout {DURATION_SECONDS} suricata -c {SURICATA_CONFIG_PATH} -i {INTERFACE} -l {PATH_TO_LOG} -v"
 
@@ -69,7 +68,7 @@ def evaluate(with_autoencoder=False):
         # --- Memulai inferensi model autoencoder ---
         print("\n--- Memulai Inferensi Model Autoencoder ---")
         import subprocess
-        MLcommand = "python3.12 ./autoencoder/theautoencoders.py"
+        MLcommand = "python3.12 /home/victim/project/src/autoencoder/theautoencoders.py"
 
         try:
             result = subprocess.run(MLcommand, shell=True, check=True, text=True, capture_output=True)
@@ -97,9 +96,8 @@ def process_data():
     print("Waktu konversi pcap ke flow:", waktucicflowmeter_end-waktucicflowmeter_start)
 
 
-    # Mulai pengukuran waktu metric pencocokan dan filtering
+    # MATCHING AND FILTERING
     metric_start = time.time()
-    # --- Optimized eve.json alert parsing and matching ---
     alert_dict = {}  # key: normalized 5-tuple, value: list of (timestamp, label)
     proto_map = {
         'TCP': '6', 'tcp': '6',
@@ -206,7 +204,7 @@ def process_data():
 
     # Add label column to original CSV
     labeled_csv_path = CICFLOWMETER_CSV_PATH.replace('.csv', '_labeled.csv')
-    print(f"Membuat salinan CSV dengan label: {labeled_csv_path}")
+    print(f"\nMembuat salinan CSV dengan label: {labeled_csv_path}")
     slowloris_count = 0
     slowread_count = 0
     slowpost_count = 0
@@ -257,7 +255,6 @@ def process_data():
     metric_end = time.time()
     metric_duration = metric_end - metric_start
     print(f"\n[METRIC] Waktu proses pencocokan dan filtering: {metric_duration:.3f} detik")
-
     print(f"\nJumlah baris di CSV sebelum dihapus: {len(rows)}")
 
     filtered_rows = []
@@ -366,6 +363,8 @@ if __name__ == "__main__":
         if run_capture():
             process_data()
             labeled_csv_path = CICFLOWMETER_CSV_PATH.replace('.csv', '_labeled.csv')
+            print("=======EVALUASI SURICATA=======")
             evaluate_labeled_vs_groundtruth(labeled_csv_path)
             evaluate(True)
+            print("=======EVALUASI SURICATA + AUTOENCODER=======")
             evaluate_labeled_vs_groundtruth(labeled_csv_path)
