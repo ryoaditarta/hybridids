@@ -39,13 +39,13 @@ MODELS_CONFIG = {
         'threshold': 0.000129  # Ganti dengan threshold optimal untuk Slowloris
     },
     'slowread': {
-        'model_path': os.path.join(BASE_MODEL_DIR, 'slowreadautoencoder/slowreadautoencoder.h5'),
-        'scaler_path': os.path.join(BASE_MODEL_DIR, 'slowreadautoencoder/slowreadscaler.gz'),
+        'model_path': os.path.join(BASE_MODEL_DIR, 'slowreadautoencoder/model_enc25_code10_batch512/slowreadautoencoder.h5'),
+        'scaler_path': os.path.join(BASE_MODEL_DIR, 'slowreadautoencoder/model_enc25_code10_batch512/slowreadscaler.gz'),
         'threshold': 0.000121  # Ganti dengan threshold optimal untuk Slow Read
     },
     'slowpost': {
-        'model_path': os.path.join(BASE_MODEL_DIR, 'slowpostautoencoder/slowpostautoencoder.h5'),
-        'scaler_path': os.path.join(BASE_MODEL_DIR, 'slowpostautoencoder/slowpostscaler.gz'),
+        'model_path': os.path.join(BASE_MODEL_DIR, 'slowpostautoencoder/model_enc25_code10_batch128/slowpostautoencoder.h5'),
+        'scaler_path': os.path.join(BASE_MODEL_DIR, 'slowpostautoencoder/model_enc25_code10_batch128/slowpostscaler.gz'),
         'threshold': 0.000012  # Ganti dengan threshold optimal untuk Slow Post
     }
 }
