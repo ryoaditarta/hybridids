@@ -24,11 +24,11 @@ EPOCHS = 100
 # --- Nama File & Direktori ---
 # Nama file akan dibuat secara otomatis berdasarkan parameter di atas
 MODEL_NAME = f"model_enc{ENCODING_DIM}_code{CODE_SIZE}_batch{BATCH_SIZE}"
-MODEL_DIR = f"./saved_models/{MODEL_NAME}" # Direktori unik untuk setiap model
-EVAL_FILE_PATH = "./data/csv/slowlorisvalidation_balanced.csv"
+MODEL_DIR = f"/home/victim/project/src/autoencoder/slowlorisautoencoder/{MODEL_NAME}" # Direktori unik untuk setiap model
+EVAL_FILE_PATH = "/home/victim/project/src/data/csv/slowlorisvalidation_balanced.csv"
 
 # --- Konfigurasi Data ---
-TRAIN_FILE_PATH = "../data/csv/slowloris.csv"
+TRAIN_FILE_PATH = "/home/victim/project/data/csv/slowloris.csv"
 ATTACK_IP = "192.168.100.135"
 
 val_mse_slowloris = []
@@ -123,8 +123,8 @@ def train_model(params, preprocessed_data,scaler):
     plt.show()
 
     os.makedirs(params['dir'], exist_ok=True)
-    autoencoder.save(os.path.join(params['dir'], "model.h5"))
-    joblib.dump(scaler, os.path.join(params['dir'], "scaler.gz"))
+    autoencoder.save(os.path.join(params['dir'], "slowlorisautoencoder.h5"))
+    joblib.dump(scaler, os.path.join(params['dir'], "slowlorisscaller.gz"))
     print(f"\n[SUCCESS] ✅ Model dan scaler untuk '{params['name']}' berhasil disimpan di '{params['dir']}'.")
 
     # Simpan semua error validation (jika mau digunakan di luar)

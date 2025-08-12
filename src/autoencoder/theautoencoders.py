@@ -34,8 +34,8 @@ LABELED_CSV_PATH = "../data/csv/result_labeled.csv"   # File Master untuk diupda
 # Anda bisa mengisi nilai threshold yang tepat untuk setiap model di sini.
 MODELS_CONFIG = {
     'slowloris': {
-        'model_path': os.path.join(BASE_MODEL_DIR, 'slowlorisautoencoder/slowlorisautoencoder.h5'),
-        'scaler_path': os.path.join(BASE_MODEL_DIR, 'slowlorisautoencoder/slowlorisscaller.gz'),
+        'model_path': os.path.join(BASE_MODEL_DIR, 'slowlorisautoencoder/model_enc25_code10_batch220/slowlorisautoencoder.h5'),
+        'scaler_path': os.path.join(BASE_MODEL_DIR, 'slowlorisautoencoder/model_enc25_code10_batch220/slowlorisscaller.gz'),
         'threshold': 0.000129  # Ganti dengan threshold optimal untuk Slowloris
     },
     'slowread': {
