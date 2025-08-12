@@ -69,7 +69,7 @@ def evaluate(with_autoencoder=False):
         # --- Memulai inferensi model autoencoder ---
         print("\n--- Memulai Inferensi Model Autoencoder ---")
         import subprocess
-        MLcommand = "python3.12 ./autoencoder/slowlorisautoencoder/slowlorisautoencoder.py"
+        MLcommand = "python3.12 ./autoencoder/theautoencoders.py"
 
         try:
             result = subprocess.run(MLcommand, shell=True, check=True, text=True, capture_output=True)
@@ -85,6 +85,7 @@ def process_data():
     
     import subprocess
     print("-> Menjalankan cicflowmeter...")
+    waktucicflowmeter_start = time.time()
     try:
         cicflowmeter_command = f"cicflowmeter -f {PCAP_OUTPUT_FILE} -c {CICFLOWMETER_CSV_PATH}"
         subprocess.run(cicflowmeter_command, shell=True, check=True)
@@ -92,68 +93,52 @@ def process_data():
     except Exception:
         print("Kesalahan saat menjalankan cicflowmeter.")
         return
+    waktucicflowmeter_end = time.time()
+    print("Waktu konversi pcap ke flow:", waktucicflowmeter_end-waktucicflowmeter_start)
+
 
     # Mulai pengukuran waktu metric pencocokan dan filtering
     metric_start = time.time()
-
-    alert_tuples = set()
-    alert_labels = dict()  # key: tuple, value: label
-    # Mapping protocol names to numbers
+    # --- Optimized eve.json alert parsing and matching ---
+    alert_dict = {}  # key: normalized 5-tuple, value: list of (timestamp, label)
     proto_map = {
         'TCP': '6', 'tcp': '6',
         'UDP': '17', 'udp': '17',
         'ICMP': '1', 'icmp': '1',
-        'IGMP': '2', 'igmp': '2',
-        'GRE': '47', 'gre': '47',
-        'ESP': '50', 'esp': '50',
-        'AH': '51', 'ah': '51',
-        'SCTP': '132', 'sctp': '132',
-        'EIGRP': '88', 'eigrp': '88',
-        'OSPF': '89', 'ospf': '89',
-        'IPIP': '4', 'ipip': '4',
-        'VRRP': '112', 'vrrp': '112',
-        'PIM': '103', 'pim': '103',
-        'L2TP': '115', 'l2tp': '115',
     }
-    # SID to label mapping
     sid_label_map = {
         '1004': 'slowloris',
         '1005': 'slowread',
         '1006': 'slowpost',
     }
+
     def tuple_normalize(key):
-        # key: (src_ip, src_port, dst_ip, dst_port, proto)
-        # Return tuple in sorted order so (A,B,C,D,P) == (C,D,A,B,P)
         ip_port_1 = (key[0], key[1])
         ip_port_2 = (key[2], key[3])
         proto = key[4]
-        # Sort by ip/port, but keep proto at the end
         if ip_port_1 <= ip_port_2:
             return (ip_port_1[0], ip_port_1[1], ip_port_2[0], ip_port_2[1], proto)
         else:
             return (ip_port_2[0], ip_port_2[1], ip_port_1[0], ip_port_1[1], proto)
 
-    # Fungsi parse_timestamp untuk Suricata dan CSV
     def parse_timestamp(ts):
-        # Suricata: "2025-08-04T20:27:56.057716+0000"
-        # CSV: "2025-08-04 20:42:34"
         if not ts:
             return None
         try:
-            # Suricata format
             return datetime.datetime.strptime(ts[:26], "%Y-%m-%dT%H:%M:%S.%f")
         except Exception:
             try:
-                # CSV format
                 return datetime.datetime.strptime(ts[:19], "%Y-%m-%d %H:%M:%S")
             except Exception:
                 return None
 
-    # Saat parsing eve.json
+    # Efficiently parse eve.json and build alert_dict
     with open(EVE_JSON_PATH, 'r') as f:
         for line in f:
-            event = json.loads(line)
-            if event.get("event_type") == "alert":
+            try:
+                event = json.loads(line)
+                if event.get("event_type") != "alert":
+                    continue
                 src_ip = event.get("src_ip")
                 src_port = event.get("src_port")
                 dest_ip = event.get("dest_ip")
@@ -161,24 +146,26 @@ def process_data():
                 proto = event.get("proto")
                 sid = str(event.get("alert", {}).get("signature_id", event.get("sid", "")))
                 proto_num = proto_map.get(str(proto).upper(), str(proto)) if isinstance(proto, str) else str(proto)
-                # Ambil waktu dari kolom "start" di event["flow"], fallback ke event["start"] jika tidak ada
                 start = None
                 if "flow" in event and "start" in event["flow"]:
                     start = event["flow"]["start"]
                 elif "start" in event:
                     start = event["start"]
                 ts_parsed = parse_timestamp(start)
+                if not all([src_ip, src_port, dest_ip, dest_port, proto_num]):
+                    continue
                 key = tuple_normalize((src_ip, str(src_port), dest_ip, str(dest_port), proto_num))
-                # print(f"[DEBUG] Tuple dari alert eve.json: {key} SID: {sid} TS: {ts_parsed}")
-                if all([src_ip, src_port, dest_ip, dest_port, proto_num]):
-                    alert_tuples.add((key, ts_parsed))
-                    label = sid_label_map.get(sid, "")
-                    if label:
-                        alert_labels[(key, ts_parsed)] = label
+                label = sid_label_map.get(sid, "")
+                if key not in alert_dict:
+                    alert_dict[key] = []
+                alert_dict[key].append((ts_parsed, label))
+            except Exception:
+                continue
+
 
     flow_tuples = set()
     csv_rows = []
-    # Saat parsing cicflowmeter CSV
+    # Parse cicflowmeter CSV and build flow_tuples and csv_rows
     with open(CICFLOWMETER_CSV_PATH, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -192,7 +179,6 @@ def process_data():
                 key = tuple_normalize((src_ip, src_port, dest_ip, dest_port, proto_num))
                 ts = row.get('timestamp')
                 ts_parsed = parse_timestamp(ts) if ts else None
-                #print(f"[DEBUG] Tuple dari cicflowmeter CSV: {key} TS: {ts_parsed}")
                 if all([src_ip, src_port, dest_ip, dest_port, proto_num]):
                     flow_tuples.add((key, ts_parsed))
                 row['proto_num'] = proto_num
@@ -202,25 +188,19 @@ def process_data():
             except KeyError:
                 continue
 
-    # Fungsi pencocokan dengan toleransi timestamp 1 detik
-    def match_tuple_with_time(alert_tuple, flow_tuple):
-        key_a, ts_a = alert_tuple
-        key_f, ts_f = flow_tuple
-        if key_a == key_f and ts_a and ts_f:
-            delta = abs((ts_a - ts_f).total_seconds())
-            #print(f"[DEBUG] Mencocokkan {key_a} dengan {key_f}, delta: {delta}")
-            return delta <= 1
-        return False
-
-    # Cari matched_tuples dengan toleransi waktu
+    # --- Efficient matching: for each flow, check if any alert exists for the same key and timestamp within 1s ---
     matched_tuples = set()
-    for alert_tuple in alert_tuples:
-        for flow_tuple in flow_tuples:
-            if match_tuple_with_time(alert_tuple, flow_tuple):
-                matched_tuples.add(flow_tuple)
+    for key, ts in flow_tuples:
+        if key in alert_dict:
+            for alert_ts, _ in alert_dict[key]:
+                if ts and alert_ts and abs((ts - alert_ts).total_seconds()) <= 1:
+                    matched_tuples.add((key, ts))
+                    break
 
+    # For reporting, count total alert events (not unique keys)
+    total_alert_events = sum(len(v) for v in alert_dict.values())
     print("\n--- Hasil Analisis ---")
-    print(f"Jumlah alert yang terdeteksi di eve.json: {len(alert_tuples)}")
+    print(f"Jumlah alert yang terdeteksi di eve.json: {total_alert_events}")
     print(f"Jumlah flow yang dianalisis oleh cicflowmeter: {len(flow_tuples)}")
     print(f"Jumlah flow yang cocok dengan alert: {len(matched_tuples)}")
 
@@ -234,16 +214,16 @@ def process_data():
         fieldnames = list(csv_rows[0].keys())
         if 'label' not in fieldnames:
             fieldnames.append('label')
-        # Saat labeling
+        # Efficient labeling: for each row, check alert_dict for matching key and timestamp
         for row in csv_rows:
             key = row['norm_key']
             ts = row['norm_ts']
             label = ''
-            for (alert_key, alert_ts), lbl in alert_labels.items():
-                if key == alert_key and ts and alert_ts and abs((ts - alert_ts).total_seconds()) <= 1:
-                    label = lbl
-                    break
-            
+            if key in alert_dict:
+                for alert_ts, lbl in alert_dict[key]:
+                    if ts and alert_ts and abs((ts - alert_ts).total_seconds()) <= 1:
+                        label = lbl
+                        break
             row['label'] = label
             if label == 'slowloris':
                 slowloris_count += 1
@@ -267,13 +247,18 @@ def process_data():
     shutil.copy2(CICFLOWMETER_CSV_PATH, filtered_csv_path)
     print(f"Membuat salinan CSV: {filtered_csv_path}")
 
+
     # Read, filter, and overwrite the filtered CSV
     with open(filtered_csv_path, 'r', newline='') as infile:
         reader = csv.DictReader(infile)
         rows = list(reader)
         fieldnames = reader.fieldnames
 
-    print(f"Jumlah baris di CSV sebelum dihapus: {len(rows)}")
+    metric_end = time.time()
+    metric_duration = metric_end - metric_start
+    print(f"\n[METRIC] Waktu proses pencocokan dan filtering: {metric_duration:.3f} detik")
+
+    print(f"\nJumlah baris di CSV sebelum dihapus: {len(rows)}")
 
     filtered_rows = []
     # Saat filtering
@@ -302,12 +287,6 @@ def process_data():
             writer.writeheader()
             writer.writerows(filtered_rows)
         print(f"Baris yang terdeteksi oleh Suricata telah dihapus dari {filtered_csv_path}.")
-
-    metric_end = time.time()
-    metric_duration = metric_end - metric_start
-    print(f"\n[METRIC] Waktu proses pencocokan dan filtering: {metric_duration:.3f} detik")
-
-    evaluate(False)
 
 def evaluate_labeled_vs_groundtruth(labeled_csv_path):
     # Mapping IP ke label ground truth
@@ -387,4 +366,6 @@ if __name__ == "__main__":
         if run_capture():
             process_data()
             labeled_csv_path = CICFLOWMETER_CSV_PATH.replace('.csv', '_labeled.csv')
+            evaluate_labeled_vs_groundtruth(labeled_csv_path)
+            evaluate(True)
             evaluate_labeled_vs_groundtruth(labeled_csv_path)
