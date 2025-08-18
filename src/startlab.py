@@ -106,8 +106,9 @@ def process_data():
     }
     sid_label_map = {
         '1004': 'slowloris',
-        '1005': 'slowread',
-        '1006': 'slowpost',
+        '1007': 'slowloris',
+        '1010': 'slowread',
+        '1012': 'slowpost',
     }
 
     def tuple_normalize(key):
@@ -289,9 +290,9 @@ def evaluate_labeled_vs_groundtruth(labeled_csv_path):
     # Mapping IP ke label ground truth
     ip_label_map = {
         "192.168.100.135": "slowloris",
-        "192.168.100.146": "slowread",
+        "192.168.100.141": "slowread",
         "192.168.100.148": "slowpost",
-        "192.168.100.41": "benign"
+        "192.168.100.146": "benign"
     }
 
     classes = ["slowloris", "slowread", "slowpost", "benign"]
