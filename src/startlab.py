@@ -290,9 +290,9 @@ def evaluate_labeled_vs_groundtruth(labeled_csv_path):
     # Mapping IP ke label ground truth
     ip_label_map = {
         "192.168.100.135": "slowloris",
-        "192.168.100.141": "slowread",
+        "192.168.100.146": "slowread",
         "192.168.100.148": "slowpost",
-        "192.168.100.146": "benign"
+        "192.168.100.141": "benign"
     }
 
     classes = ["slowloris", "slowread", "slowpost", "benign"]
@@ -366,6 +366,6 @@ if __name__ == "__main__":
             labeled_csv_path = CICFLOWMETER_CSV_PATH.replace('.csv', '_labeled.csv')
             print("=======EVALUASI SURICATA=======")
             evaluate_labeled_vs_groundtruth(labeled_csv_path)
-            evaluate(True)
-            print("=======EVALUASI SURICATA + AUTOENCODER=======")
-            evaluate_labeled_vs_groundtruth(labeled_csv_path)
+            # evaluate(True)
+            # print("=======EVALUASI SURICATA + AUTOENCODER=======")
+            # evaluate_labeled_vs_groundtruth(labeled_csv_path)
